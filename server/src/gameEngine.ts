@@ -187,7 +187,6 @@ export class GameEngine {
     // Priority: win > pong/kong > chow/pass
     let bestWinner: string | null = null;
     let bestPongKong: string | null = null;
-    let hasChow = false;
 
     for (const [playerId, claim] of Object.entries(claims)) {
       if (claim.action === 'win') {
@@ -196,9 +195,6 @@ export class GameEngine {
       }
       if (claim.action === 'pong' || claim.action === 'kong') {
         bestPongKong = playerId;
-      }
-      if (claim.action === 'chow') {
-        hasChow = true;
       }
     }
 
@@ -213,19 +209,18 @@ export class GameEngine {
       return;
     }
 
-    if (hasChow) {
-      // Open chow window for the next player (counter-clockwise from discarder)
+    // No win/pong/kong — check if next player can chow (no timer, always offered after window)
+    if (this.state.houseRules.allowChow && this.state.lastDiscard) {
       const nextSeat = (this.state.lastDiscardSeat! + 3) % 4;
       const nextPlayer = this.state.players[nextSeat];
-      const chowClaim = Object.entries(claims).find(([id]) => id === nextPlayer.id && claims[id].action === 'chow');
-      if (chowClaim) {
+      if (this.canChow(nextPlayer, this.state.lastDiscard)) {
         this.state.phase = 'awaiting-chow';
         this.state.currentSeat = nextSeat;
         return;
       }
     }
 
-    // No claims: advance turn
+    // No claims possible: advance turn
     this.advanceTurn();
   }
 
@@ -473,19 +468,7 @@ export class GameEngine {
         }
       }
 
-      // Check chow (only from left player = counter-clockwise predecessor)
-      if (rules.allowChow) {
-        const leftSeat = (player.seat + 1) % 4; // the player who plays just before in counter-clockwise order
-        // Actually: counter-clockwise order is (seat + 3) % 4 for next.
-        // The player who discarded and whose discard you can chow must be the one directly before you.
-        // In counter-clockwise order: next seat = (current + 3) % 4
-        // So you can chow if lastDiscardSeat === (player.seat + 1) % 4
-        const expectedDiscardSeat = (player.seat + 1) % 4;
-        if (this.state.lastDiscardSeat === expectedDiscardSeat && this.canChow(player, discard)) {
-          eligible.push('chow');
-        }
-      }
-
+      // Chow is NOT offered during the claim window — it happens in awaiting-chow phase after the timer
       eligible.push('pass');
     } else if (phase === 'awaiting-chow' && this.state.currentSeat === player.seat) {
       eligible.push('chow');
