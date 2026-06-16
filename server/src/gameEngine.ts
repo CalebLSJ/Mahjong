@@ -159,6 +159,9 @@ export class GameEngine {
     const player = this.state.players.find(p => p.id === playerId);
     if (!player) throw new Error(`Player ${playerId} not found`);
 
+    if (this.state.phase !== 'awaiting-discard') throw new Error('Not discard phase');
+    if (this.state.currentSeat !== player.seat) throw new Error('Not your turn');
+
     const tileIdx = player.hand.findIndex(t => t.id === tileId);
     if (tileIdx === -1) throw new Error(`Tile ${tileId} not in player's hand`);
 
