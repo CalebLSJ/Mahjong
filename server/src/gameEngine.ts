@@ -39,6 +39,7 @@ export interface InternalGameState {
   dealerSeat: number;
   houseRules: HouseRules;
   roundResult: RoundResult | null;
+  discardPiles: Tile[][];
 }
 
 // Seat index -> wind: seat 0=South, 1=East, 2=North, 3=West
@@ -84,7 +85,8 @@ export class GameEngine {
       roundNumber,
       dealerSeat,
       houseRules: rules,
-    roundResult: null,
+      roundResult: null,
+      discardPiles: [[], [], [], []],
     };
   }
 
@@ -132,6 +134,7 @@ export class GameEngine {
     this.state.claimWindowEndsAt = null;
     this.state.pendingClaims = {};
     this.state.roundResult = null;
+    this.state.discardPiles = [[], [], [], []];
   }
 
   private replaceBonusTiles(seat: number): void {
@@ -168,6 +171,7 @@ export class GameEngine {
     const [tile] = player.hand.splice(tileIdx, 1);
     this.state.lastDiscard = tile;
     this.state.lastDiscardSeat = player.seat;
+    this.state.discardPiles[player.seat].push(tile);
     this.state.phase = 'claim-window';
     this.state.pendingClaims = {};
     this.state.claimWindowEndsAt = Date.now() + 5000;

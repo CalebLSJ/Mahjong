@@ -157,7 +157,7 @@ function buildGameView(state: InternalGameState, playerId: string, seat: number,
     houseRules: state.houseRules,
     eligibleClaims: engine.getEligibleClaims(playerId),
     roundResult: state.roundResult,
-    discardHistory: {},
+    discardHistory: Object.fromEntries(state.discardPiles.map((pile, i) => [i, pile])),
   };
 }
 
