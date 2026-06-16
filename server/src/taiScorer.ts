@@ -12,6 +12,7 @@ export interface ScoringContext {
   bonusTiles: Tile[];
   isTianHu: boolean;
   isDiHu: boolean;
+  hasYao: boolean;
 }
 
 export interface TaiResult {
@@ -124,10 +125,18 @@ export function scoreTai(decomp: WinDecomposition, ctx: ScoringContext): TaiResu
   if (rules.allowFlowers) {
     const seatNum = windToSeatNumber(ctx.seatWind);
     ctx.bonusTiles
-      .filter(t => (t.kind === 'flower' || t.kind === 'season') && (t as any).seatNumber === seatNum)
+      .filter(t =>
+        (t.kind === 'flower' && t.seatNumber === seatNum) ||
+        (t.kind === 'season' && t.seatNumber === seatNum)
+      )
       .forEach(() => add('flower-match', 'Matching Flower/Season'));
     if (ctx.bonusTiles.filter(t => t.kind === 'flower').length === 4) add('flower-full-set', 'Full Flower Set');
     if (ctx.bonusTiles.filter(t => t.kind === 'season').length === 4) add('flower-full-set', 'Full Season Set');
+  }
+
+  // Animal yao bonus (Rat+Cat or Chicken+Worm pair)
+  if (ctx.hasYao && rules.allowAnimals && rules.yaoPayout === 'tai') {
+    add('animal-yao', 'Animal Yao Bonus');
   }
 
   return finalise(components, rules);

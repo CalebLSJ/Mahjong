@@ -26,7 +26,7 @@ describe('scoreTai', () => {
     const result = scoreTai(decomp, {
       rules, isSelfDraw: false, isDealer: false,
       seatWind: 'east', prevailingWind: 'east',
-      bonusTiles: [], isTianHu: false, isDiHu: false,
+      bonusTiles: [], isTianHu: false, isDiHu: false, hasYao: false,
     });
     expect(result.components.some(c => c.key === 'ping-hu')).toBe(true);
   });
@@ -45,7 +45,7 @@ describe('scoreTai', () => {
     const result = scoreTai(decomp, {
       rules, isSelfDraw: false, isDealer: false,
       seatWind: 'east', prevailingWind: 'east',
-      bonusTiles: [], isTianHu: false, isDiHu: false,
+      bonusTiles: [], isTianHu: false, isDiHu: false, hasYao: false,
     });
     expect(result.components.some(c => c.key === 'pong-pong')).toBe(true);
     expect(result.components.find(c => c.key === 'pong-pong')?.tai).toBe(3);
@@ -66,7 +66,7 @@ describe('scoreTai', () => {
     const result = scoreTai(decomp, {
       rules: cappedRules, isSelfDraw: false, isDealer: false,
       seatWind: 'east', prevailingWind: 'east',
-      bonusTiles: [], isTianHu: false, isDiHu: false,
+      bonusTiles: [], isTianHu: false, isDiHu: false, hasYao: false,
     });
     expect(result.total).toBeLessThanOrEqual(5);
   });
