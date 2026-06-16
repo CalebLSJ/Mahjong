@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><div style={{color:'white',padding:'2rem'}}>Mahjong loading...</div></React.StrictMode>
+  <React.StrictMode><App /></React.StrictMode>
 );
