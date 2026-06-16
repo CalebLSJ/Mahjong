@@ -4,10 +4,10 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "paths": { "@mahjong/shared": ["../shared/src/index.ts"] }
+    "skipLibCheck": true
   },
   "include": ["src"]
 }
