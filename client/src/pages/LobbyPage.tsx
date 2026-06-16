@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { socket } from '../socket';
 import { LobbyPlayerInfo, HouseRules, BotDifficulty } from '@mahjong/shared';
 import { useLobbyStore } from '../store/lobbyStore';
+import { useGameStore } from '../store/gameStore';
 import PlayerSlot from '../components/lobby/PlayerSlot';
 import HouseRulesForm from '../components/lobby/HouseRulesForm';
 import TaiTableEditor from '../components/lobby/TaiTableEditor';
@@ -26,7 +27,10 @@ export default function LobbyPage() {
       setIsHost(ps.find(p => p.id === myPlayerId)?.isHost ?? false);
       useLobbyStore.getState().updateLobby(ps, houseRules, myPlayerId);
     });
-    socket.on('game:state', () => navigate(`/game/${roomCode}`));
+    socket.on('game:state', (view) => {
+      useGameStore.getState().setView(view);
+      navigate(`/game/${roomCode}`);
+    });
     socket.on('room:error', (msg) => alert(msg));
     return () => {
       socket.off('room:updated');
