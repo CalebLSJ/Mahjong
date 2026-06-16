@@ -26,7 +26,14 @@ export function findDecompositions(
 
   // 13 orphans check
   if (opts.allow13Orphans && is13Orphans(concealed)) {
-    results.push({ pair: [concealed[0], concealed[0]], concealedMelds: [], revealedMelds: revealed });
+    // Find the duplicate tile (the one that appears twice)
+    const keys = concealed.map(tileKey);
+    const keyCount = new Map<string, number>();
+    keys.forEach(k => keyCount.set(k, (keyCount.get(k) ?? 0) + 1));
+    const dupKey = [...keyCount.entries()].find(([, count]) => count === 2)?.[0];
+    const dupTiles = concealed.filter(t => tileKey(t) === dupKey);
+    const pair: [Tile, Tile] = dupTiles.length >= 2 ? [dupTiles[0], dupTiles[1]] : [concealed[0], concealed[1]];
+    results.push({ pair, concealedMelds: [], revealedMelds: revealed });
   }
 
   // 7 pairs check (only valid with no revealed melds)
@@ -37,7 +44,7 @@ export function findDecompositions(
   // Standard decomposition: derive needed concealed melds from tile count.
   // Skip standard decomp if the hand qualifies as 7 pairs — 7 pairs is an
   // exclusive hand type: the hand is only valid if allow7Pairs is true.
-  const handIs7Pairs = revealed.length === 0 && is7Pairs(concealed);
+  const handIs7Pairs = opts.allow7Pairs && revealed.length === 0 && is7Pairs(concealed);
   if (!handIs7Pairs) {
     const meldSlotsNeeded = (concealed.length - 2) / 3;
     const sorted = sortTiles(concealed);
@@ -112,15 +119,6 @@ function formMelds(tiles: Tile[], needed: number): Meld[] | null {
   return null;
 }
 
-function is7Pairs(tiles: Tile[]): boolean {
-  if (tiles.length !== 14) return false;
-  const sorted = sortTiles(tiles);
-  for (let i = 0; i < 14; i += 2) {
-    if (!tilesEqual(sorted[i], sorted[i + 1])) return false;
-  }
-  return true;
-}
-
 const ORPHANS_REQUIRED = ['bamboo-1', 'bamboo-9', 'circles-1', 'circles-9', 'characters-1', 'characters-9',
   'wind-east', 'wind-south', 'wind-west', 'wind-north', 'dragon-red', 'dragon-green', 'dragon-white'];
 
@@ -129,6 +127,18 @@ function tileKey(t: Tile): string {
   if (t.kind === 'wind') return `wind-${t.wind}`;
   if (t.kind === 'dragon') return `dragon-${t.dragon}`;
   return t.kind;
+}
+
+function is7Pairs(tiles: Tile[]): boolean {
+  if (tiles.length !== 14) return false;
+  const sorted = sortTiles(tiles);
+  const pairKeys = new Set<string>();
+  for (let i = 0; i < 14; i += 2) {
+    if (!tilesEqual(sorted[i], sorted[i + 1])) return false;
+    pairKeys.add(tileKey(sorted[i]));
+  }
+  // All 7 pairs must be of distinct tile types
+  return pairKeys.size === 7;
 }
 
 function is13Orphans(tiles: Tile[]): boolean {

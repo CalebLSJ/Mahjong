@@ -22,10 +22,24 @@ describe('canWin - standard hand (14 tiles, no revealed melds)', () => {
     expect(canWin(hand, [], { allow7Pairs: true, allow13Orphans: true })).toBe(true);
   });
 
-  it('rejects 7 pairs when disabled', () => {
-    const hand = [b(1,0), b(1,1), b(2,0), b(2,1), b(3,0), b(3,1), b(4,0), b(4,1),
-                  b(5,0), b(5,1), b(6,0), b(6,1), b(7,0), b(7,1)];
+  it('rejects 7 pairs when disabled (hand cannot win via standard)', () => {
+    // b1,b1 b3,b3 b5,b5 b7,b7 b9,b9 + east×2 + red-dragon×2
+    // Cannot form standard hand: no chows possible (non-consecutive), no pongs (only 2 each)
+    const hand = [
+      b(1,0), b(1,1), b(3,0), b(3,1), b(5,0), b(5,1),
+      b(7,0), b(7,1), b(9,0), b(9,1),
+      wd('east', 0), wd('east', 1),
+      dr('red', 0), dr('red', 1),
+    ];
     expect(canWin(hand, [], { allow7Pairs: false, allow13Orphans: true })).toBe(false);
+  });
+
+  it('standard hand also matching 7-pair pattern wins when 7-pairs disabled', () => {
+    // b1,b1,b2,b2,b3,b3,b4,b4,b5,b5,b6,b6,b7,b7 — forms 4 chows + pair
+    const hand = [b(1,0), b(1,1), b(2,0), b(2,1), b(3,0), b(3,1),
+                  b(4,0), b(4,1), b(5,0), b(5,1), b(6,0), b(6,1),
+                  b(7,0), b(7,1)];
+    expect(canWin(hand, [], { allow7Pairs: false, allow13Orphans: true })).toBe(true);
   });
 
   it('rejects a losing hand', () => {
