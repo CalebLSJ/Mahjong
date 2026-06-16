@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { buildDefaultHouseRules } from '@mahjong/shared';
+import { useLobbyStore } from '../store/lobbyStore';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -11,12 +12,15 @@ export default function HomePage() {
   const [error, setError] = useState('');
 
   React.useEffect(() => {
+    const setLobby = useLobbyStore.getState().setLobby;
     socket.connect();
-    socket.on('room:created', ({ roomCode }) => navigate(`/lobby/${roomCode}`));
-    socket.on('room:joined', ({ roomCode }) => navigate(`/lobby/${roomCode}`));
+    // room:created is only for the host; server also emits room:joined with full data
+    socket.on('room:joined', (data) => {
+      setLobby(data);
+      navigate(`/lobby/${data.roomCode}`);
+    });
     socket.on('room:error', setError);
     return () => {
-      socket.off('room:created');
       socket.off('room:joined');
       socket.off('room:error');
     };

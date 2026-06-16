@@ -27,6 +27,7 @@ io.on('connection', socket => {
       const room = rm.createRoom(socket.id, playerId, playerName, houseRules);
       socket.join(room.code);
       socket.emit('room:created', { roomCode: room.code, playerId, seat: 0 });
+      socket.emit('room:joined', { roomCode: room.code, playerId, seat: 0, players: rm.getLobbyPlayers(room), houseRules: room.houseRules });
     } catch (e: unknown) { socket.emit('room:error', (e as Error).message); }
   });
 

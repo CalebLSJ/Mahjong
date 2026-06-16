@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { socket } from '../socket';
 import { LobbyPlayerInfo, HouseRules, BotDifficulty } from '@mahjong/shared';
+import { useLobbyStore } from '../store/lobbyStore';
 import PlayerSlot from '../components/lobby/PlayerSlot';
 import HouseRulesForm from '../components/lobby/HouseRulesForm';
 import TaiTableEditor from '../components/lobby/TaiTableEditor';
@@ -9,32 +10,30 @@ import TaiTableEditor from '../components/lobby/TaiTableEditor';
 export default function LobbyPage() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
-  const [players, setPlayers] = useState<LobbyPlayerInfo[]>([]);
-  const [rules, setRules] = useState<HouseRules | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState('');
-  const [isHost, setIsHost] = useState(false);
+  const lobbyStore = useLobbyStore();
+
+  // Initialize from store (populated by HomePage before navigation)
+  const [players, setPlayers] = useState<LobbyPlayerInfo[]>(lobbyStore.players);
+  const [rules, setRules] = useState<HouseRules | null>(lobbyStore.houseRules);
+  const [myPlayerId] = useState(lobbyStore.myPlayerId);
+  const [isHost, setIsHost] = useState(lobbyStore.isHost);
   const [tab, setTab] = useState<'rules' | 'tai'>('rules');
 
   useEffect(() => {
-    socket.on('room:joined', ({ playerId, players: ps, houseRules }) => {
-      setMyPlayerId(playerId);
-      setPlayers(ps);
-      setRules(houseRules);
-      setIsHost(ps.find(p => p.id === playerId)?.isHost ?? false);
-    });
     socket.on('room:updated', ({ players: ps, houseRules }) => {
       setPlayers(ps);
       setRules(houseRules);
+      setIsHost(ps.find(p => p.id === myPlayerId)?.isHost ?? false);
+      useLobbyStore.getState().updateLobby(ps, houseRules, myPlayerId);
     });
     socket.on('game:state', () => navigate(`/game/${roomCode}`));
     socket.on('room:error', (msg) => alert(msg));
     return () => {
-      socket.off('room:joined');
       socket.off('room:updated');
       socket.off('game:state');
       socket.off('room:error');
     };
-  }, [navigate, roomCode]);
+  }, [navigate, roomCode, myPlayerId]);
 
   function handleRulesChange(r: HouseRules) {
     setRules(r);
