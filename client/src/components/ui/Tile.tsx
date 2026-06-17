@@ -149,13 +149,19 @@ const CIRCLE_POSITIONS: [number, number][][] = [
   [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]],
 ];
 
-function CircleRing({ d }: { d: number }) {
+// Traditional coloring: 1-circle and center of 5-circle are red
+const CIRCLE_RED: Record<number, Set<string>> = {
+  1: new Set(['1,1']),
+  5: new Set(['1,1']),
+};
+
+function CircleRing({ d, red }: { d: number; red?: boolean }) {
   const bw = Math.max(1.5, Math.round(d * 0.28));
   return (
     <div style={{
       width: d, height: d, borderRadius: '50%',
       background: '#f5e6c8',
-      border: `${bw}px solid #2e7d32`,
+      border: `${bw}px solid ${red ? '#c62828' : '#2e7d32'}`,
       boxSizing: 'border-box',
       flexShrink: 0,
     }} />
@@ -165,13 +171,15 @@ function CircleRing({ d }: { d: number }) {
 function CircleFace({ value, dot }: { value: number; dot: number }) {
   const rows = value === 8 ? 4 : 3;
   const positions = new Set(CIRCLE_POSITIONS[value - 1].map(([r, c]) => `${r},${c}`));
+  const redPos = CIRCLE_RED[value] ?? new Set<string>();
   return (
     <div style={{ display: 'grid', gridTemplateRows: `repeat(${rows}, 1fr)`, gridTemplateColumns: 'repeat(3, 1fr)', width: '88%', height: '88%' }}>
       {Array.from({ length: rows * 3 }, (_, idx) => {
         const r = Math.floor(idx / 3), c = idx % 3;
+        const key = `${r},${c}`;
         return (
           <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {positions.has(`${r},${c}`) && <CircleRing d={dot} />}
+            {positions.has(key) && <CircleRing d={dot} red={redPos.has(key)} />}
           </div>
         );
       })}
@@ -181,10 +189,17 @@ function CircleFace({ value, dot }: { value: number; dot: number }) {
 
 // ── Bamboo sticks ──────────────────────────────────────────────────────────
 
-// [row1count, row2count] for values 1–9
-const BAMBOO_ROWS: [number, number][] = [
-  [1, 0], [2, 0], [3, 0], [4, 0],
-  [3, 2], [3, 3], [4, 3], [4, 4], [5, 4],
+// [topCount, botCount, redSet] — redSet entries are "rowIdx,stickIdx"
+const BAMBOO_ROWS: [number, number, Set<string>][] = [
+  [1, 0, new Set()],
+  [2, 0, new Set()],
+  [3, 0, new Set()],
+  [4, 0, new Set()],
+  [3, 2, new Set(['0,1'])],  // 5-bamboo: center of top row is red
+  [3, 3, new Set()],
+  [4, 3, new Set()],
+  [4, 4, new Set()],
+  [5, 4, new Set()],
 ];
 
 function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }) {
@@ -195,20 +210,25 @@ function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }
       </div>
     );
   }
-  const [r1, r2] = BAMBOO_ROWS[value - 1];
+  const [r1, r2, redSet] = BAMBOO_ROWS[value - 1];
   const rows = r2 > 0 ? [r1, r2] : [r1];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: Math.max(1, sh / 6) }}>
       {rows.map((count, ri) => (
         <div key={ri} style={{ display: 'flex', gap: Math.max(1, sw / 2) }}>
-          {Array.from({ length: count }, (_, si) => (
-            <div key={si} style={{
-              width: sw, height: sh, borderRadius: sw / 2, position: 'relative',
-              background: 'linear-gradient(180deg, #a5d6a7 0%, #388e3c 28%, #2e7d32 72%, #1b5e20 100%)',
-            }}>
-              <div style={{ position: 'absolute', top: '35%', left: 0, right: 0, height: 1, background: '#c8e6c9', borderRadius: 1 }} />
-            </div>
-          ))}
+          {Array.from({ length: count }, (_, si) => {
+            const red = redSet.has(`${ri},${si}`);
+            return (
+              <div key={si} style={{
+                width: sw, height: sh, borderRadius: sw / 2, position: 'relative',
+                background: red
+                  ? 'linear-gradient(180deg, #ef9a9a 0%, #e53935 28%, #c62828 72%, #b71c1c 100%)'
+                  : 'linear-gradient(180deg, #a5d6a7 0%, #388e3c 28%, #2e7d32 72%, #1b5e20 100%)',
+              }}>
+                <div style={{ position: 'absolute', top: '35%', left: 0, right: 0, height: 1, background: red ? '#ffcdd2' : '#c8e6c9', borderRadius: 1 }} />
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -228,10 +248,11 @@ interface Props {
 }
 
 // sm=discard/opponent hand, md=melds, lg=player hand
+// h-15 is not in Tailwind's default scale (12→14→16); use h-14 (56px) for lg
 const SIZE_META = {
   sm:  { cls: 'w-6 h-8',   font: 8,  wind: 10, dot: 4,  sw: 2, sh: 7  },
   md:  { cls: 'w-8 h-11',  font: 11, wind: 14, dot: 6,  sw: 3, sh: 11 },
-  lg:  { cls: 'w-11 h-15', font: 15, wind: 19, dot: 9,  sw: 5, sh: 17 },
+  lg:  { cls: 'w-11 h-14', font: 14, wind: 18, dot: 8,  sw: 4, sh: 15 },
 };
 
 export default function Tile({ tile, faceDown, selected, highlighted, onClick, size = 'md', rotate }: Props) {
