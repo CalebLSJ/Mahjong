@@ -192,24 +192,57 @@ const STICK = {
   B: { bg: 'linear-gradient(180deg, #90caf9 0%, #1976d2 28%, #1565c0 72%, #0d47a1 100%)', node: '#bbdefb' },
 } as const;
 
-// Explicit per-tile layouts (value 1 = bird, handled separately)
+// Explicit per-tile layouts (value 1 = bird, value 5 handled separately)
 const BAMBOO_LAYOUTS: SC[][][] = [
   [],                                                              // 1 (unused)
   [['G','G']],                                                    // 2
   [['G','R','G']],                                               // 3
   [['G','R'],['G','R']],                                         // 4
-  [['G','G'],['R'],['G','G']],                                   // 5: 2+1+2, center red
+  [],                                                              // 5 (special quincunx)
   [['G','R','G'],['G','R','G']],                                 // 6
   [['B'],['G','R','G'],['G','B','G']],                           // 7
-  [['G','R','G','R'],['G','R','G','R']],                        // 8
+  [['G','R','R','G'],['G','R','R','G']],                        // 8: two M's (outer G, inner RR)
   [['G','R','G'],['G','R','G'],['G','R','G']],                  // 9
 ];
+
+// 5-bamboo: quincunx — GG top, R at 1.5-row position, GG bottom
+function Bamboo5Face({ sw, sh }: { sw: number; sh: number }) {
+  const sg = Math.max(1, sw / 2);
+  const cw = 2 * sw + sg;
+  const ch = 3 * sh; // gap between rows = sh, so center fills it exactly
+  const sticks: { x: number; y: number; c: SC }[] = [
+    { x: 0,        y: 0,      c: 'G' },
+    { x: sw + sg,  y: 0,      c: 'G' },
+    { x: (cw - sw) / 2, y: sh, c: 'R' }, // 1.5-row position
+    { x: 0,        y: 2 * sh, c: 'G' },
+    { x: sw + sg,  y: 2 * sh, c: 'G' },
+  ];
+  return (
+    <div style={{ position: 'relative', width: cw, height: ch }}>
+      {sticks.map(({ x, y, c }, i) => {
+        const { bg, node } = STICK[c];
+        return (
+          <div key={i} style={{ position: 'absolute', left: x, top: y, width: sw, height: sh, borderRadius: sw / 2, background: bg }}>
+            <div style={{ position: 'absolute', top: '35%', left: 0, right: 0, height: 1, background: node, borderRadius: 1 }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }) {
   if (value === 1) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
         <BirdSVG />
+      </div>
+    );
+  }
+  if (value === 5) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
+        <Bamboo5Face sw={sw} sh={sh} />
       </div>
     );
   }
