@@ -34,6 +34,7 @@ export interface InternalGameState {
   lastDiscardSeat: number | null;
   claimWindowEndsAt: number | null;
   pendingClaims: Record<string, { action: ClaimType; chowTileIds?: [string, string] }>;
+  pendingBonusSeat: number | null;
   prevailingWind: WindDir;
   roundNumber: number;
   dealerSeat: number;
@@ -81,6 +82,7 @@ export class GameEngine {
       lastDiscardSeat: null,
       claimWindowEndsAt: null,
       pendingClaims: {},
+      pendingBonusSeat: null,
       prevailingWind,
       roundNumber,
       dealerSeat,
@@ -293,12 +295,13 @@ export class GameEngine {
     if (action === 'kong') {
       const replacement = this.state.wall.shift();
       if (replacement) {
+        player.hand.push(replacement);
         if (isBonus(replacement)) {
-          player.bonusTiles.push(replacement);
-          const rep2 = this.state.wall.shift();
-          if (rep2) player.hand.push(rep2);
-        } else {
-          player.hand.push(replacement);
+          this.state.lastDiscard = null;
+          this.state.currentSeat = player.seat;
+          this.state.phase = 'pending-bonus';
+          this.state.pendingBonusSeat = player.seat;
+          return;
         }
       }
     }
@@ -306,6 +309,7 @@ export class GameEngine {
     this.state.lastDiscard = null;
     this.state.currentSeat = player.seat;
     this.state.phase = 'awaiting-discard';
+    this.state.pendingBonusSeat = null;
   }
 
   private advanceTurn(): void {
@@ -318,23 +322,49 @@ export class GameEngine {
 
     const drawn = this.state.wall.shift()!;
     const nextPlayer = this.state.players[nextSeat];
-
-    if (isBonus(drawn)) {
-      nextPlayer.bonusTiles.push(drawn);
-      // Draw replacement
-      const replacement = this.state.wall.shift();
-      if (replacement) {
-        nextPlayer.hand.push(replacement);
-      }
-    } else {
-      nextPlayer.hand.push(drawn);
-    }
-
+    nextPlayer.hand.push(drawn);
     this.state.currentSeat = nextSeat;
-    this.state.phase = 'awaiting-discard';
     this.state.lastDiscard = null;
     this.state.claimWindowEndsAt = null;
+
+    if (isBonus(drawn)) {
+      this.state.phase = 'pending-bonus';
+      this.state.pendingBonusSeat = nextSeat;
+    } else {
+      this.state.phase = 'awaiting-discard';
+      this.state.pendingBonusSeat = null;
+    }
     this.state.pendingClaims = {};
+  }
+
+  buFlower(playerId: string): void {
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) throw new Error('Player not found');
+    if (this.state.phase !== 'pending-bonus') throw new Error('Not pending bonus');
+    if (this.state.pendingBonusSeat !== player.seat) throw new Error('Not your bonus');
+
+    // Find bonus tile in hand and move to bonusTiles
+    const bonusIdx = player.hand.findIndex(t => isBonus(t));
+    if (bonusIdx === -1) throw new Error('No bonus tile in hand');
+    const [bonusTile] = player.hand.splice(bonusIdx, 1);
+    player.bonusTiles.push(bonusTile);
+
+    // Draw replacement
+    if (this.state.wall.length === 0) {
+      this.endRoundDraw();
+      return;
+    }
+    const replacement = this.state.wall.shift()!;
+    player.hand.push(replacement);
+
+    // If replacement is also bonus, stay in pending-bonus
+    if (isBonus(replacement)) {
+      this.state.phase = 'pending-bonus';
+      this.state.pendingBonusSeat = player.seat;
+    } else {
+      this.state.phase = 'awaiting-discard';
+      this.state.pendingBonusSeat = null;
+    }
   }
 
   private endRoundDraw(): void {

@@ -8,6 +8,7 @@ import { ServerToClientEvents, ClientToServerEvents, GameView } from '@mahjong/s
 import * as rm from './roomManager';
 import { BotAI } from './botAI';
 import { InternalGameState } from './gameEngine';
+import { isBonus } from './tileEngine';
 
 const app = express();
 const httpServer = createServer(app);
@@ -121,6 +122,18 @@ io.on('connection', socket => {
     // TODO: implement concealed kong
   });
 
+  socket.on('game:bu-flower', () => {
+    const room = rm.getRoomBySocket(socket.id);
+    if (!room?.engine) return;
+    try {
+      room.engine.buFlower(playerId);
+      broadcastGameState(room.code, room.engine.getState());
+      // If bot's turn after bu, schedule bot
+      const state = room.engine.getState();
+      if (state.phase === 'awaiting-discard') scheduleBotTurns(room.code);
+    } catch (e: unknown) { console.error((e as Error).message); }
+  });
+
   socket.on('disconnect', () => {
     const room = rm.getRoomBySocket(socket.id);
     if (room) {
@@ -157,6 +170,9 @@ function buildGameView(state: InternalGameState, playerId: string, seat: number,
     dealerSeat: state.dealerSeat,
     houseRules: state.houseRules,
     eligibleClaims: engine.getEligibleClaims(playerId),
+    pendingBonus: state.phase === 'pending-bonus' && state.pendingBonusSeat === seat
+      ? (state.players[seat].hand.find(t => isBonus(t)) ?? null)
+      : null,
     roundResult: state.roundResult,
     discardHistory: Object.fromEntries(state.discardPiles.map((pile, i) => [i, pile])),
   };
@@ -217,6 +233,18 @@ function scheduleBotTurns(roomCode: string): void {
   const room = rm.getRoom(roomCode);
   if (!room?.engine) return;
   const state = room.engine.getState();
+
+  // Handle bot pending-bonus
+  if (state.phase === 'pending-bonus' && state.pendingBonusSeat !== null) {
+    const pendingPlayer = room.players[state.pendingBonusSeat];
+    if (pendingPlayer?.isBot) {
+      room.engine.buFlower(pendingPlayer.id);
+      broadcastGameState(roomCode, room.engine.getState());
+      scheduleBotTurns(roomCode); // recurse to handle discard or next bonus
+    }
+    return;
+  }
+
   if (state.phase !== 'awaiting-discard') return;
   const currentPlayer = room.players[state.currentSeat];
   if (!currentPlayer?.isBot) return;

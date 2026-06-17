@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ClaimType } from '@mahjong/shared';
+import { socket } from '../../socket';
 
 export default function ActionButtons() {
   const view = useGameStore(s => s.view)!;
@@ -10,6 +11,19 @@ export default function ActionButtons() {
   const eligible = view.eligibleClaims;
   const [chowMode, setChowMode] = useState(false);
   const [chowSelected, setChowSelected] = useState<string[]>([]);
+
+  // Bu-flower handling (independent of eligibleClaims)
+  if (view.phase === 'pending-bonus' && view.pendingBonus && view.currentSeat === view.mySeat) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-[#f5e6c8]/60 text-sm">You drew a bonus tile — reveal and draw replacement:</span>
+        <button onClick={() => socket.emit('game:bu-flower')}
+          className="px-6 py-2 bg-[#ffd700] text-[#1a472a] font-bold rounded-lg hover:bg-yellow-400 transition text-lg">
+          補花 Bu
+        </button>
+      </div>
+    );
+  }
 
   if (eligible.length === 0) return null;
 

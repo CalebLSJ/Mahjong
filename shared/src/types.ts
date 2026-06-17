@@ -29,6 +29,7 @@ export type GamePhase =
   | 'awaiting-discard'
   | 'claim-window'
   | 'awaiting-chow'
+  | 'pending-bonus'
   | 'round-end'
   | 'game-over';
 
@@ -88,6 +89,7 @@ export type GameView = {
   dealerSeat: number;
   houseRules: HouseRules;
   eligibleClaims: ClaimType[];
+  pendingBonus: Tile | null;
   roundResult: RoundResult | null;
   discardHistory: Record<number, Tile[]>;
 };
@@ -139,4 +141,5 @@ export interface ClientToServerEvents {
   'game:discard': (data: { tileId: string }) => void;
   'game:claim': (data: { action: ClaimType; chowTileIds?: [string, string] }) => void;
   'game:concealed-kong': (data: { tileId: string }) => void;
+  'game:bu-flower': () => void;
 }
