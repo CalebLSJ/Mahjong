@@ -43,8 +43,8 @@ export interface InternalGameState {
   discardPiles: Tile[][];
 }
 
-// Seat index -> wind: seat 0=South, 1=East, 2=North, 3=West
-const SEAT_WINDS: WindDir[] = ['south', 'east', 'north', 'west'];
+// Wind names in turn order from dealer: dealer=East, next=South, next=West, next=North
+const WIND_ORDER: WindDir[] = ['east', 'south', 'west', 'north'];
 
 export class GameEngine {
   private state: InternalGameState;
@@ -63,7 +63,7 @@ export class GameEngine {
         id: setup.id,
         name: setup.name,
         seat,
-        wind: SEAT_WINDS[seat],
+        wind: WIND_ORDER[(dealerSeat - seat + 4) % 4],
         hand: [],
         melds: [],
         bonusTiles: [],
