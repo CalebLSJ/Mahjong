@@ -184,16 +184,25 @@ function CircleFace({ value, dot }: { value: number; dot: number }) {
 
 // ── Bamboo sticks ──────────────────────────────────────────────────────────
 
-// [topCount, botCount] for values 1–9
-const BAMBOO_ROWS: [number, number][] = [
-  [1, 0], [2, 0], [3, 0], [4, 0],
-  [3, 2], [3, 3], [4, 3], [4, 4], [5, 4],
-];
+type SC = 'G' | 'R' | 'B';
 
-// Traditional alternating green/red by (row+stick) index
-const BAMBOO_COLORS = [
-  { bg: 'linear-gradient(180deg, #a5d6a7 0%, #388e3c 28%, #2e7d32 72%, #1b5e20 100%)', node: '#c8e6c9' },
-  { bg: 'linear-gradient(180deg, #ef9a9a 0%, #e53935 28%, #c62828 72%, #b71c1c 100%)', node: '#ffcdd2' },
+const STICK = {
+  G: { bg: 'linear-gradient(180deg, #a5d6a7 0%, #388e3c 28%, #2e7d32 72%, #1b5e20 100%)', node: '#c8e6c9' },
+  R: { bg: 'linear-gradient(180deg, #ef9a9a 0%, #e53935 28%, #c62828 72%, #b71c1c 100%)', node: '#ffcdd2' },
+  B: { bg: 'linear-gradient(180deg, #90caf9 0%, #1976d2 28%, #1565c0 72%, #0d47a1 100%)', node: '#bbdefb' },
+} as const;
+
+// Explicit per-tile layouts (value 1 = bird, handled separately)
+const BAMBOO_LAYOUTS: SC[][][] = [
+  [],                                                              // 1 (unused)
+  [['G','G']],                                                    // 2
+  [['G','R','G']],                                               // 3
+  [['G','R'],['G','R']],                                         // 4
+  [['G','G'],['R'],['G','G']],                                   // 5: 2+1+2, center red
+  [['G','R','G'],['G','R','G']],                                 // 6
+  [['B'],['G','R','G'],['G','B','G']],                           // 7
+  [['G','R','G','R'],['G','R','G','R']],                        // 8
+  [['G','R','G'],['G','R','G'],['G','R','G']],                  // 9
 ];
 
 function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }) {
@@ -204,14 +213,13 @@ function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }
       </div>
     );
   }
-  const [r1, r2] = BAMBOO_ROWS[value - 1];
-  const rows = r2 > 0 ? [r1, r2] : [r1];
+  const layout = BAMBOO_LAYOUTS[value - 1];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: Math.max(1, sh / 6) }}>
-      {rows.map((count, ri) => (
+      {layout.map((row, ri) => (
         <div key={ri} style={{ display: 'flex', gap: Math.max(1, sw / 2) }}>
-          {Array.from({ length: count }, (_, si) => {
-            const { bg, node } = BAMBOO_COLORS[(ri + si) % 2];
+          {row.map((c, si) => {
+            const { bg, node } = STICK[c];
             return (
               <div key={si} style={{ width: sw, height: sh, borderRadius: sw / 2, position: 'relative', background: bg }}>
                 <div style={{ position: 'absolute', top: '35%', left: 0, right: 0, height: 1, background: node, borderRadius: 1 }} />
@@ -221,6 +229,34 @@ function BambooFace({ value, sw, sh }: { value: number; sw: number; sh: number }
         </div>
       ))}
     </div>
+  );
+}
+
+// ── 7-circle: slanted row of 3 on top of 2×2 ─────────────────────────────
+
+function Circle7Face() {
+  const r = 10;
+  const circles: { cx: number; cy: number; col: number }[] = [
+    // slanted 3 on top (lower-left → upper-right)
+    { cx: 20, cy: 42, col: 0 },
+    { cx: 50, cy: 27, col: 1 },
+    { cx: 80, cy: 14, col: 2 },
+    // 2×2 at bottom
+    { cx: 28, cy: 62, col: 0 },
+    { cx: 72, cy: 62, col: 2 },
+    { cx: 28, cy: 86, col: 0 },
+    { cx: 72, cy: 86, col: 2 },
+  ];
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: '90%', height: '90%' }}>
+      {circles.map(({ cx, cy, col }, i) => (
+        <g key={i}>
+          <circle cx={cx} cy={cy} r={r} fill="#f5e6c8" />
+          <circle cx={cx} cy={cy} r={r * 0.72} fill="none"
+            stroke={CIRCLE_RING_COLORS[col]} strokeWidth={r * 0.56} />
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -273,7 +309,7 @@ export default function Tile({ tile, faceDown, selected, highlighted, onClick, s
         );
       }
       if (tile.suit === 'bamboo') return <BambooFace value={tile.value} sw={sw} sh={sh} />;
-      if (tile.suit === 'circles') return <CircleFace value={tile.value} dot={dot} />;
+      if (tile.suit === 'circles') return tile.value === 7 ? <Circle7Face /> : <CircleFace value={tile.value} dot={dot} />;
     }
 
     if (tile.kind === 'wind') {
