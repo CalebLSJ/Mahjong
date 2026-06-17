@@ -32,7 +32,13 @@ export default function Tile({ tile, faceDown, selected, highlighted, onClick, s
   function tileContent(): React.ReactNode {
     if (!tile) return null;
     if (tile.kind === 'dragon') {
-      const color = tile.dragon === 'red' ? '#c62828' : tile.dragon === 'green' ? '#2e7d32' : '#888';
+      if (tile.dragon === 'white') {
+        // White dragon (白板): traditional blank tile with a blue border frame
+        return (
+          <div style={{ width: '70%', height: '70%', border: '2px solid #1565c0', borderRadius: 2 }} />
+        );
+      }
+      const color = tile.dragon === 'red' ? '#c62828' : '#2e7d32';
       return <span style={{ color }}>{DRAGON_CHARS[tile.dragon]}</span>;
     }
     if (tile.kind === 'wind') return <span>{WIND_CHARS[tile.wind]}</span>;
